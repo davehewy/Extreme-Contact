@@ -192,6 +192,19 @@ if(!function_exists('xtrcon_checkdata')):
 endif;
 
 /**
+ * xtrcon_save_settings_message function.
+ * 
+ * @access public
+ * @return void
+ */
+
+if(!function_exists('xtrcon_save_settings_message')):
+	function xtrcon_save_settings_message(){
+		echo '<div class="updated"><p>'.__("Extreme Contact settings updated").'</p></div>';
+	}
+endif;
+
+/**
  * xtrcon_save_settings function.
  * 
  * @access public
@@ -202,6 +215,8 @@ if(!function_exists('xtrcon_save_settings')):
 
 	function xtrcon_save_settings(){
 		if(isset($_POST['xtrcon_save_settings'])):	
+		
+			add_action('admin_notices','xtrcon_save_settings_message');
 			
 			$xtrcon_sent_from = $_POST['xtrcon_sent_from'];
 			$xtrcon_subject = $_POST['xtrcon_subject'];
