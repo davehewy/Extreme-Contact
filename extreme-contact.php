@@ -17,9 +17,6 @@ register_deactivation_hook( __FILE__, 'xtrcon_deactivate' );
 add_action( 'admin_init' , 'xtrcon_save_settings');
 add_action('admin_menu', 'xtrcon_admin_menu');
 
-// register the shortcode to the function
-add_shortcode( 'extreme-contact', 'xtrcon_shortcode' );
-
 /**
 * end action and hook registrations 
 */
@@ -73,6 +70,9 @@ if(!function_exists('xtrcon_deactivate')):
 		foreach($check_exists as $v):
 			delete_option($v);	
 		endforeach;
+		
+		remove_shortcode( 'xtrcon-contact' );
+		
 	}
 endif;
 
@@ -357,27 +357,31 @@ if(!function_exists('xtrcon_store_submission')):
 		// Look for the xtrcon_submissions table.
 		
 		$table = $wpdb->prefix."xtrcon_submissions";
-		$structure = "CREATE TABLE IF NOT EXISTS `$table` (
+		$structure = "CREATE TABLE IF NOT EXISTS`$table` (
 		  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
 		  `name` varchar(255) DEFAULT NULL,
 		  `email` varchar(255) DEFAULT NULL,
+		  `telephone` varchar(25) DEFAULT NULL,
 		  `subject` varchar(255) DEFAULT NULL,
 		  `message` text,
 		  `time` int(11) DEFAULT NULL,
 		  `ip` varchar(25) DEFAULT NULL,
+		  `responded` tinyint(4) DEFAULT NULL,
 		  PRIMARY KEY (`id`)
-		) ENGINE=InnoDB DEFAULT CHARSET=latin1;";
-		$wpdb->query($table);
+		) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;";
+		$wpdb->query($structure);
 		
 		// Insert the submission.
 		
 		$wpdb->insert($table,array(
 			"name" => $args[0],
 			"email" => $args[1],
+			"telephone" => $args[3],
 			"subject" => $args[2],
-			"message" => $args[3],
+			"message" => $args[4],
 			"time" => time(),
-			"ip" => $_SERVER['REMOTE_ADDR']
+			"ip" => $_SERVER['REMOTE_ADDR'],
+			"responded" => 0
 		));
 				
 	}
@@ -393,233 +397,257 @@ endif;
  */
 
 if(!function_exists('xtrcon_shortcode')):
-	function xtrcon_shortcode(){
+	function xtrcon_shortcode($args){
+	
+		$xtrcon_sent_from = get_option('xtrcon_sent_from');
+		$xtrcon_subject = get_option('xtrcon_subject');
+		$xtrcon_to_address = get_option('xtrcon_to_address');
+		$xtrcon_from_address = get_option('xtrcon_from_address');
+		$xtrcon_cc_address_list = get_option('xtrcon_cc_addresses');
+		$xtrcon_successful_submission_text = get_option('xtrcon_successful_submission_text');
+		$xtrcon_google_conversion_code = get_option('xtrcon_google_conversion_code');
+		$xtrcon_use_storage = get_option('xtrcon_use_storage');
+		$xtrcon_use_wp_nonce = get_option('xtrcon_use_wp_nonce');
 		
-		if(isset($_POST['contact_submit'])):
+		// Anti script measures
 		
-			/* Options */
+		$xtrcon_use_anti = get_option('xtrcon_use_anti');
+		$xtrcon_anti_secret_question = get_option('xtrcon_anti_secret_question');
+		$xtrcon_anti_secret_answer = get_option('xtrcon_anti_secret_answer');
 		
-			$xtrcon_sent_from = get_option('xtrcon_sent_from');
-			$xtrcon_subject = get_option('xtrcon_subject');
-			$xtrcon_to_address = get_option('xtrcon_to_address');
-			$xtrcon_from_address = get_option('xtrcon_from_address');
-			$xtrcon_cc_address_list = get_option('xtrcon_cc_addresses');
-			$xtrcon_successful_submission_text = get_option('xtrcon_successful_submission_text');
-			$xtrcon_google_conversion_code = get_option('xtrcon_google_conversion_code');
-			$xtrcon_use_storage = get_option('xtrcon_use_storage');
-			$xtrcon_use_wp_nonce = get_option('xtrcon_use_wp_nonce');
-			
-			// Anti script measures
-			
-			$xtrcon_use_anti = get_option('xtrcon_use_anti');
-			$xtrcon_anti_secret_question = get_option('xtrcon_anti_secret_question');
-			$xtrcon_anti_secret_answer = get_option('xtrcon_anti_secret_answer');
-			
-			// Tricky field
-			
-			$xtrcon_use_tricky_field = get_option( 'xtrcon_use_tricky_field', 'no' );
+		// Tricky field
+		
+		$xtrcon_use_tricky_field = get_option( 'xtrcon_use_tricky_field', 'no' );	
+		
+		$success = false;
 						
-			/* Submitted Values */
+		if(isset($_POST['xtrcon_submit'])):
 			
-			$name = xtrcon_checkdata($_POST['contact_name'],4);
-			$email = xtrcon_check_email($_POST['contact_email']);
-			$subject = xtrcon_checkdata($_POST['contact_subject'],4);
-			$body = htmlspecialchars(stripslashes(strip_tags(nl2br($_POST['contact_message_body']))));
-			$anti = xtrcon_checkdata($_POST['contact_anti'],1);	
+			$xtrcon_sub_name = xtrcon_checkdata($_POST['xtrcon_name'],4);
+			$xtrcon_sub_email = $_POST['xtrcon_email'];
+			$xtrcon_sub_subject = (xtrcon_checkdata($_POST['xtrcon_subject'],4)) ? xtrcon_checkdata($_POST['xtrcon_subject'],4) : '';
+			$xtrcon_sub_body = htmlspecialchars(stripslashes(strip_tags(nl2br($_POST['xtrcon_message_body']))));
+			$xtrcon_sub_anti = xtrcon_checkdata($_POST['xtrcon_anti'],4);	
+			$xtrcon_phone = $_POST['xtrcon_phone'];
 		
-			if($name):
+			if($xtrcon_sub_name):
 				
-				if($email):
+				if(xtrcon_check_email($xtrcon_sub_email)):
 				
-					if($subject):
-				
-						if($body):
-						
-							// If the user has indicated to use a tricky field, it should not be present.
-							
-							$tricky_field_proceed = true;
-							
-							if($xtrcon_use_tricky_field == 'yes'):
-							
-								if(isset($_POST['xtrcon_tricky']) || $_POST['xtrcon_tricky'])
-									$tricky_field_proceed = false;
+					if($xtrcon_phone):
 								
+					if($xtrcon_sub_body):
+					
+						// If the user has indicated to use a tricky field, it should not be present.
+						
+						$tricky_field_proceed = true;
+						
+						if($xtrcon_use_tricky_field == 'yes'):
+						
+							if(isset($_POST['xtrcon_tricky']) || $_POST['xtrcon_tricky'])
+								$tricky_field_proceed = false;
+							
+						
+						endif;
+						
+						// Proceed if tricky field validated ok.
+						
+						if($tricky_field_proceed):
+																					
+							// If the user is using the wp_nonce field it must also validate through it.
+							
+							$wp_nonce_proceed = true;
+					
+							if($xtrcon_use_wp_nonce == 'yes'):
+							
+								if(!wp_verify_nonce($_POST['xtrcon_contact_nonce_submit'],'xtrcon_contact_nonce')):
+									
+									$wp_nonce_proceed = false;
+									
+								endif;
 							
 							endif;
-							
-							// Proceed if tricky field validated ok.
-							
-							if($tricky_field_proceed):
-																
-								// If the user is using the wp_nonce field it must also validate through it.
 								
-								$wp_nonce_proceed = true;
-						
-								if($xtrcon_use_wp_nonce == 'yes'):
 								
-									if(!wp_verify_nonce($_POST['xtrcon_contact_nonce_submit'],'xtrcon_contact_nonce')):
-										
-										$wp_nonce_proceed = false;
-										
+							if($wp_nonce_proceed):
+														
+															
+								// IF the user has set anti script to yes and set question / answer
+								
+								$xtrcon_anti_proceed = true;
+								
+								if($xtrcon_use_wp_nonce == 'yes' && $xtrcon_anti_secret_question!='' && $xtrcon_anti_secret_answer!=''):
+									if($anti != $xtrcon_anti_secret_answer):
+									
+										$xtrcon_anti_proceed = false;
+									
 									endif;
 								
 								endif;
 									
+								if($xtrcon_anti_proceed):
 									
-								if($wp_nonce_proceed):
-																
-									// IF the user has set anti script to yes and set question / answer
+									// Send mail using wordpress wp-mail			
 									
-									$xtrcon_anti_proceed = true;
+									$to = $xtrcon_to_address;
+									$subject = $xtrcon_subject;
+									$headers = 'From: '.$xtrcon_sent_from.' <'.$xtrcon_from_address.'>' . "\r\n";
 									
-									if($xtrcon_use_wp_nonce == 'yes' && $xtrcon_anti_secret_question!='' && $xtrcon_anti_secret_answer!=''):
-										if($anti != $xtrcon_anti_secret_answer):
+									if($xtrcon_cc_address_list):
+									
+										$cc_list = explode(",",$xtrcon_cc_address_list);
 										
-											$xtrcon_anti_proceed = false;
+										foreach($cc_list as $k=>$v):
+											
+											if(!xtrcon_check_email($v))
+												unset($cc_list[$k]);
+																					
+										endforeach;
 										
-										endif;
+										$cc_list = implode(",",$cc_list);
+										
+										if(count($cc_list)>0)
+											$headers .= "Cc: ".$cc_list."\r\n";
 									
 									endif;
+									
+									// Html text
+									
+									$html_text = "<h2>Email from Bytewire Contact form</h2>";
+									$html_text.= "<hr><b>From:</b> ".$xtrcon_sub_name."</br>";
+									$html_text.= "<b>Email Address:</b> ".$xtrcon_sub_email."<br>";
+									$html_text.= "<b>Telephone:</b> ".$xtrcon_phone."<br>";
+									$html_text.= "<b>Message:</b> ".nl2br($xtrcon_sub_body);
+									
+									// Attachments
+									$attachments = '';
+																		
+									add_filter('wp_mail_content_type',create_function('', 'return "text/html";'));
+									wp_mail( $to, $subject, $html_text, $headers, $attachments );
+																												
+									// Output google conversion code
+									
+									if($xtrcon_google_conversion_code === true)
+										echo stripslashes($xtrcon_google_conversion_code);
 										
-									if($xtrcon_anti_proceed):
+								 	// Store the data in the database
+									
+									if($xtrcon_use_storage == 'yes'):
+																		
+										xtrcon_store_submission($xtrcon_sub_name,$xtrcon_sub_email,$xtrcon_sub_subject,$xtrcon_phone,$xtrcon_sub_body);
 										
-										// Send mail using wordpress wp-mail			
-										
-										$to = $xtrcon_to_address;
-										$subject = $xtrcon_subject;
-										$headers = 'From: '.$xtrcon_sent_from.' <'.$xtrcon_from_address.'>' . "\r\n";
-										
-										if($xtrcon_cc_address_list):
-										
-											$cc_list = explode(",",$xtrcon_cc_address_list);
-											
-											foreach($cc_list as $k=>$v):
+									endif;
+									
+									// Use the stored success text
+									    
+									$message = '<div class="xtrcon_message xtrcon_success">'.$xtrcon_successful_submission_text.'</div>';
+									
+									$success = true;
+									
+								else:									
+									$message = __('<div class="xtrcon_message xtrcon_fail">You failed to answer the anti script correctly please try again.</div>');	
+									$errors++;	
+								endif;
+								
+							else:
+								$message = __('<div class="xtrcon_message xtrcon_fail">You failed to validate it.</div>');	
 												
-												if(!xtrcon_check_email($v))
-													unset($cc_list[$k]);
-																						
-											endforeach;
-											
-											$cc_list = implode(",",$cc_list);
-											
-											if(count($cc_list)>0)
-												$headers .= "Cc: ".$cc_list."\r\n";
-										
-										endif;
-										
-										// Html text
-										
-										$html_text = "<h2>Email from Bytewire Contact form</h2>";
-										$html_text.= "<hr><b>From:</b> ".$name."</br>";
-										$html_text.= "<b>Email Address:</b> ".$email."<br>";
-										$html_text.= "<b>Subject:</b> ".$subject."<br>";
-										$html_text.= "<b>Message:</b> ".nl2br($body);
-										
-										// Attachments
-										$attachments = '';
-																			
-										add_filter('wp_mail_content_type',create_function('', 'return "text/html";'));
-										wp_mail( $to, $subject, $message, $headers, $attachments );
-																													
-										// Output google conversion code
-										
-										if($xtrcon_google_conversion_code === true)
-											echo stripslashes($xtrcon_google_conversion_code);
-											
-									 	// Store the data in the database
-										
-										if($xtrcon_use_storage != 'yes'):
-											
-											xtrcon_store_submission($name,$email,$subject,$body);
-											
-										endif;
-										
-										// Use the stored success text
-										    
-										$message = $xtrcon_successful_submission_text;
-										
-									else:									
-										$message = __('<div class="message fail">You failed to answer the anti script correctly please try again.</div>');		
-									endif;
-									
-								else:
-									$message = __('<div class="message fail">You failed to validate it.</div>');												endif;																									
-							endif; // Tricky field is so tricky, it outputs no error message ;-)																																
+								$errors++;							
+							endif;																									
 						else:
-							$message = __("<div class='message fail'>You must fill out anti script check.</div>");
-						endif;
-						
+							$errors++;
+						endif; // Tricky field is so tricky, it outputs no error message ;-)																								
 					else:
-						$message = __("<div class='message fail'>You must enter a subject.</div>");
+						$message = __('<div class="xtrcon_message xtrcon_fail">You must include a message to send to us.</div>');
+						$errors++;
+					endif;
+					
+					else:
+					
+						$message = __('<div class="xtrcon_message xtrcon_fail">You must enter a valid telephone number.</div>');
+						$errors++;
+					
 					endif;
 					
 				else:
-					$message = __("<div class='message fail'>You must include a valid email address.</div>");
+					$message = __('<div class="xtrcon_message xtrcon_fail">You must include a valid email address.</div>');
+					$errors++;
 				endif;
 				
 			else:
-				$message = __("<div class='message fail'>You must enter your name.</div>");
+				$message = __('<div class="xtrcon_message xtrcon_fail">You must enter your name.</div>');
+				$errors++;
 			endif;
 			
 		endif;
 		
 		// Prepend the error or success message to the output
+		
+		if($message && $errors>0):
+		
+			$retmessage = '<div id="contact_response">';
+			$retmessage .= $message;
+			$retmessage .= '</div>';
+		
+		elseif($message && $errors<=0):
+		
+			$retmessage = $message;
+		
+		else:
+			$retmessage = '';
+		endif;
 
-		$output .= $message;
+		$output = $retmessage;
+		
+		if(!$success):
 
     	// Add the rest of the form output
 
-		$output .= 	'<form method="post">';
-		$output .=  '<div class="grid_4 marginbottom5">';
-		$output .=	'Name:';
-		$output .=	'</div>';					
-		$output .=	'<div class="grid_8 marginbottom5">';
-		$output .=	'<input type="text" name="contact_name" class="contact_text">';				
-		$output .= 	'</div>';					
-		$output .=  '<div class="clear"></div>';					
-		$output .=  '<div class="grid_4 marginbottom5">';					
-		$output .=  'Email Address:';						
-		$output .=  '</div>';				
-		$output .=	'<div class="grid_8 marginbottom5">';
-		$output .=	'<input type="text" name="contact_email" class="contact_text">';
-		$output .=	'</div>';
-		$output .=	'<div class="clear"></div>';
-		$output .=	'<div class="grid_4 marginbottom5">';
-		$output .=	'Subject:';
-		$output .=	'</div>';
-		$output .=	'<div class="grid_8 marginbottom5">';
-		$output .=	'<input type="text" name="contact_subject" class="contact_text">';
-		$output .=	'</div>';
-		$output .=	'<div class="clear"></div>';
-		$output .=	'<div class="grid_4 marginbottom5">';
-		$output .=	'Message:';
-		$output .=	'</div>';
-		$output .=	'<div class="grid_8 marginbottom5">';
-		$output .=	'<textarea cols="38" rows="6" name="contact_message_body" class="contact_text"></textarea>';
-		$output .=	'</div>';
-		$output .=	'<div class="clear"></div>';
+		$output .= 	'<form id="commentform" class="contactform" method="post" action="">';
+		
+		$output .= '<p class="content_name">';
+		$output .= '<input type="text" tabindex="1" size="22" value="'.$_POST['xtrcon_name'].'" id="xtrcon_name" name="xtrcon_name">';
+		$output .= '<label for="xtrcon_name">';
+		$output .= '<small>Name (required)</small>';
+		$output .= '</label>';
+		$output .= '</p>';
+		
+		$output .= '<p class="content_email">';
+		$output .= '<input type="text" tabindex="2" size="22" value="'.$_POST['xtrcon_email'].'" id="xtrcon_email" name="xtrcon_email">';
+		$output .= '<label for="xtrcon_email">';
+		$output .= '<small>Email (required)</small>';
+		$output .= '</label>';
+		$output .= '</p>';
+
+		$output .= '<p class="content_phone">';
+		$output .= '<input type="text" tabindex="3" size="22" value="'.$_POST['xtrcon_phone'].'" id="xtrcon_phone" name="xtrcon_phone">';
+		$output .= '<label for="xtrcon_phone">';
+		$output .= '<small>Phone</small>';
+		$output .= '</label>';
+		$output .= '</p>';			
+		
+		$output .= '<p class="content_message">';
+		$output .= '<textarea tabindex="4" rows="10" cols="95%" id="contact_message" name="xtrcon_message_body">'.stripslashes($_POST['xtrcon_message_body']).'</textarea>';
+		$output .= '</p>';		
 		
 		// Only output the anti checker if the user wants one
 		
-		if($xtrcon_use_anti == 'yes'):
+		if($xtrcon_use_anti == 'yes' && $xtrcon_anti_secret_question!='' && $xtrcon_anti_secret_answer!=''):
 		
-			$output .=	'<div class="grid_4 marginbottom5">';
+			$output .= '<p class="xtrcon_anti">';
 			$output .=	$xtrcon_anti_secret_question;
-			$output .=	'</div>';
-			$output .=	'<div class="grid_8 marginbottom5">';
-			$output .=	'<input type="text" name="contact_anti" class="contact_text">';
-			$output .=	'</div>';		
+			$output .=	'<input type="text" id="xtrcon_anti" name="xtrcon_anti" class="contact_text">';
+			$output .= '<label for="xtrcon_anti">';
+			$output .= '<small>'.$xtrcon_anti_secret_question.'</small>';
+			$output .= '</label>';
+			$output .= '</p>';		
 		
 		endif;
 		
-
-		$output .=	'<div class="clear"></div>';
-		$output .=	'<div class="grid_12 center margintop10">';
-		$output .=	'<button type="submit" name="contact_submit" class="button green">Send</button>';
 		
 		// Only output the secret question if the user wants it there.
 		
-		if($xtrcon_use_wp_nonce == 'yes' && $xtrcon_anti_secret_question!='' && $xtrcon_anti_secret_answer!=''):
+		if($xtrcon_use_wp_nonce == 'yes'):
 			
 			// Output a wordpress protection nonce.
 			
@@ -635,13 +663,22 @@ if(!function_exists('xtrcon_shortcode')):
 		
 		endif;
 		
+		$output .= '<p class="content_submit">';
+		$output .= '<input type="submit" value="Send Message" tabindex="5" id="submit" name="xtrcon_submit">';
+		$output .= '</p>';		
+
 		
-		$output .=	'</div>';
 		$output .=	'</form>';
 		
-		// Return it for use in shortcodes
+		endif; /* End success check */
+
+		// Return it for use in shortcode
 		
 		return $output;
 		
 	}
 endif;
+
+// register the shortcode
+
+add_shortcode( 'xtrcon-contact', 'xtrcon_shortcode' );
