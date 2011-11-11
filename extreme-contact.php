@@ -357,7 +357,7 @@ if(!function_exists('xtrcon_store_submission')):
 		// Look for the xtrcon_submissions table.
 		
 		$table = $wpdb->prefix."xtrcon_submissions";
-		$structure = "CREATE TABLE IF NOT EXISTS`$table` (
+		$structure = "CREATE TABLE IF NOT EXISTS `$table` (
 		  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
 		  `name` varchar(255) DEFAULT NULL,
 		  `email` varchar(255) DEFAULT NULL,
@@ -367,8 +367,9 @@ if(!function_exists('xtrcon_store_submission')):
 		  `time` int(11) DEFAULT NULL,
 		  `ip` varchar(25) DEFAULT NULL,
 		  `responded` tinyint(4) DEFAULT NULL,
+		  `notes` text,
 		  PRIMARY KEY (`id`)
-		) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;";
+		) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=latin1;";
 		$wpdb->query($structure);
 		
 		// Insert the submission.
