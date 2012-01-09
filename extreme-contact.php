@@ -47,6 +47,7 @@ if(!function_exists('xtrcon_activate')):
 		add_option( 'xtrcon_use_wp_nonce', 'yes', '', 'yes' );
 		
 	}
+	
 endif;
 
 /**
@@ -218,6 +219,8 @@ if(!function_exists('xtrcon_save_settings')):
 		
 			add_action('admin_notices','xtrcon_save_settings_message');
 			
+			print_r($_POST);
+			
 			$xtrcon_sent_from = $_POST['xtrcon_sent_from'];
 			$xtrcon_subject = $_POST['xtrcon_subject'];
 			$xtrcon_to_sub = $_POST['xtrcon_to_address'];
@@ -231,7 +234,8 @@ if(!function_exists('xtrcon_save_settings')):
 			$xtrcon_anti_secret_question_sub = $_POST['xtrcon_anti_secret_question'];
 			$xtrcon_anti_secret_answer_sub = $_POST['xtrcon_anti_secret_answer'];
 			$xtrcon_use_storage_sub = $_POST['xtrcon_use_storage'];
-			
+			$xtrcon_button_classes = $_POST['xtrcon_button_classes'];
+						
 			// Now update them or create them.
 			update_option( 'xtrcon_sent_from', $xtrcon_sent_from );
 			update_option( 'xtrcon_subject', $xtrcon_subject );
@@ -243,25 +247,29 @@ if(!function_exists('xtrcon_save_settings')):
 			
 			// Ones we don't know exist.
 						
-			$check_exists = array('xtracon_cc_list'=>'xtrcon_cc_addresses','xtrcon_use_anti' => 'xtrcon_use_anti','xtrcon_anti_secret_question' => 'xtrcon_anti_secret_question','xtrcon_anti_secret_answer' => 'xtrcon_anti_secret_answer','xtrcon_use_storage' => 'xtrcon_use_storage','xtrcon_google_conversion_code'=>'xtrcon_google_conversion_code','xtrcon_use_tricky_field' => 'xtrcon_use_tricky_field');
+			$check_exists = array(
+				'xtracon_cc_list'=>'xtrcon_cc_addresses',
+				'xtrcon_use_anti' => 'xtrcon_use_anti',
+				'xtrcon_anti_secret_question' => 'xtrcon_anti_secret_question',
+				'xtrcon_anti_secret_answer' => 'xtrcon_anti_secret_answer',
+				'xtrcon_use_storage' => 'xtrcon_use_storage',
+				'xtrcon_google_conversion_code'=>'xtrcon_google_conversion_code',
+				'xtrcon_use_tricky_field' => 'xtrcon_use_tricky_field',
+				'xtrcon_button_classes'=>'xtrcon_button_classes'
+			);
 			
-						
-			foreach($check_exists as $k=>$v):
-						
-				if(get_option($v) !== false ):	
-					
-					// update option;
+			
+			foreach($check_exists as $k=>$v):	
+												
+				// update option;
+				if($_POST[$k]):
 					update_option($v,$_POST[$k]);
-					
-				else:
-							
-					add_option($v,$_POST[$k],'','yes');
-				
 				endif;
 			
 			endforeach;
-						
+			
 		endif;
+					
 	}
 endif;
 
@@ -289,6 +297,7 @@ if(!function_exists('xtrcon_admin_page')):
 		$xtrcon_anti_secret_question = get_option( 'xtrcon_anti_secret_question', '' );
 		$xtrcon_anti_secret_answer = get_option( 'xtrcon_anti_secret_answer', '' );
 		$xtrcon_use_storage = get_option( 'xtrcon_use_storage', 'no' );
+		$xtrcon_button_classes = get_option('xtrcon_button_classes','');
 		
 		echo '<div class="wrap">';
 		echo '<h2>'.__('Extreme Contact').'</h2>';
@@ -328,7 +337,7 @@ if(!function_exists('xtrcon_admin_page')):
 		echo '<tr><th><label for="xtrcon_use_anti">Use anti script:</label></th><td><input type="checkbox" name="xtrcon_use_anti" id="xtrcon_use_anti" value="yes" ';checked($xtrcon_use_anti,'yes'); echo '></td></tr>';
 		echo '<tr><th><label for="">IF yes</label></th><td></td></tr>';
 		echo '<tr><th><label for="xtrcon_anti_secret_question">Secret question:</label></th><td><input type="text" name="xtrcon_anti_secret_question" id="xtrcon_anti_secret_question" value="'.esc_attr($xtrcon_anti_secret_question).'"><br><span class="description">Example what does 2 x 10 = ?</span></td></tr>';
-		echo '<tr><th><label for="xtrcon_anti_secret_answer">Secret answer:</label></th><td><input type="text" name="xtrcon_anti_secret_answer" id="xtrcon_anti_secret_answer" value="'.esc_attr($xtrcon_anti_secret_answer).'"><br><span class="description">Example: 20</span></td></tr>';
+		echo '<tr><th><label for="xtrcon_anti_secret_answer">Secret answer:</label></th><td><input id="xtrcon_anti_secret_answer" type="text" name="xtrcon_anti_secret_answer"><br><span class="description">Example: 20</span></td></tr>';
 		echo '</table>';
 
 		echo '<p class="submit"><input type="submit" name="xtrcon_save_settings" id="submit" class="button-primary" value="Apply"></p>';
@@ -341,13 +350,44 @@ if(!function_exists('xtrcon_admin_page')):
 		
 		echo '<p class="submit"><input type="submit" name="xtrcon_save_settings" id="submit" class="button-primary" value="Apply"></p>';
 		
+		echo '<h3>'.__('Control Look & Feel').'</h3>';
+		
+		echo '<p>'.__("We allow you to control the look and feel of the form by offering a few simple options to wrap the input boxes in your own html.<br>We also understand the importance of CSS controls and you can fully override the css or  You can also add additional classes to the inputs themselves.").'</p>';
+		
+		echo '<table class="form-table">';
+		
+		echo '<tr><th><label for="xtrcon_use_storage">Overwrite default output?:</label></th><td><input type="checkbox" name="xtrcon_use_storage" id="xtrcon_use_storage" value="yes" ';checked($xtrcon_use_storage,'yes'); echo '>&nbsp;<span class="description">WARNING! It\'s your responsibility from here on out.</span></td></tr>';
+		echo '<tr><th><label for="xtrcon_use_storage">Exclude default CSS:</label></th><td><input type="checkbox" name="xtrcon_use_storage" id="xtrcon_use_storage" value="yes" ';checked($xtrcon_use_storage,'yes'); echo '>&nbsp;<span class="description">WARNING! It\'s your responsibility from here on out.</span></td></tr>';
+		echo '<tr><th><label for="xtrcon_button_classes">Button classes:</label></th><td><input type="text" name="xtrcon_button_classes" id="xtrcon_button_classes" '; if($xtrcon_button_classes): echo 'value="'.esc_attr($xtrcon_button_classes).'"'; endif; echo '">&nbsp;<span class="description">Separate each additional class name with a comma.</span></td></tr>';
+		echo '<tr><th><label for="xtrcon_use_storage">Additional input classes:</label></th><td><input type="text" name="xtrcon_anti_secret_answer" id="xtrcon_anti_secret_answer" '; if($xtrcon_anti_secret_answer): echo 'value="'.esc_attr($xtrcon_anti_secret_answer).'"'; endif; echo '">&nbsp;<span class="description">Separate each additional class name with a comma.</span></td></tr>';		
+		
+		echo '<tr><th><label for="xtrcon_use_storage">Before inputs (wrapped by form):</label></th><td><textarea class="large-text code" name="xtrcon_google_conversion_code" id="xtrcon_google_conversion_code">'.esc_attr(stripslashes($xtrcon_google_conversion_code)).'</textarea><br><span class="description">'.__("Include any HTML tags you to proceed the output of the inputs, perhaps a div for padding etc").'</span></td></tr>';	
+		
+		echo '<tr><th><label for="xtrcon_use_storage">After inputs (wrapped by /form):</label></th><td><textarea class="large-text code" name="xtrcon_google_conversion_code" id="xtrcon_google_conversion_code">'.esc_attr(stripslashes($xtrcon_google_conversion_code)).'</textarea><br><span class="description">'.__("Include any extra content and or closing tags required after the form.").'</span></td></tr>';
+		
+		echo '<tr><th><label for="xtrcon_use_storage">Before each input:</label></th><td><textarea class="large-text code" name="xtrcon_google_conversion_code" id="xtrcon_google_conversion_code">'.esc_attr(stripslashes($xtrcon_google_conversion_code)).'</textarea><br><span class="description">'.__("Include any HTML tags you to proceed the output of the inputs, perhaps a div for padding etc").'</span></td></tr>';
+		
+		echo '<tr><th><label for="xtrcon_use_storage">After each input:</label></th><td><textarea class="large-text code" name="xtrcon_google_conversion_code" id="xtrcon_google_conversion_code">'.esc_attr(stripslashes($xtrcon_google_conversion_code)).'</textarea><br><span class="description">'.__("Include any HTML tags you to proceed the output of the inputs, perhaps a div for padding etc").'</span></td></tr>';	
+		
+		echo '</table>';		
+		
+		echo '<p class="submit"><input type="submit" name="xtrcon_save_settings" id="submit" class="button-primary" value="Apply"></p>';		
+		
 		echo '</form>';
 		
 		echo '</div>';
 	}
 endif;
 
+/**
+ * xtrcon_store_submission function.
+ * 
+ * @access public
+ * @return void
+ */
+
 if(!function_exists('xtrcon_store_submission')):
+
 	function xtrcon_store_submission(){
 		
 		$args = func_get_args();
@@ -420,10 +460,14 @@ if(!function_exists('xtrcon_shortcode')):
 		
 		$xtrcon_use_tricky_field = get_option( 'xtrcon_use_tricky_field', 'no' );	
 		
+		// CSS Controls
+		
+		$xtrcon_button_classes = get_option('xtrcon_button_classes');
+		
 		$success = false;
 						
 		if(isset($_POST['xtrcon_submit'])):
-			
+					
 			$xtrcon_sub_name = xtrcon_checkdata($_POST['xtrcon_name'],4);
 			$xtrcon_sub_email = $_POST['xtrcon_email'];
 			$xtrcon_sub_subject = (xtrcon_checkdata($_POST['xtrcon_subject'],4)) ? xtrcon_checkdata($_POST['xtrcon_subject'],4) : '';
@@ -434,26 +478,27 @@ if(!function_exists('xtrcon_shortcode')):
 			if($xtrcon_sub_name):
 				
 				if(xtrcon_check_email($xtrcon_sub_email)):
-				
-					if($xtrcon_phone):
 								
+					if($xtrcon_phone):
+									
 					if($xtrcon_sub_body):
+					
 					
 						// If the user has indicated to use a tricky field, it should not be present.
 						
 						$tricky_field_proceed = true;
-						
+												
 						if($xtrcon_use_tricky_field == 'yes'):
 						
-							if(isset($_POST['xtrcon_tricky']) || $_POST['xtrcon_tricky'])
+							if(isset($_POST['xtrcon_tricky']) && $_POST['xtrcon_tricky']!='')
 								$tricky_field_proceed = false;
-							
-						
+													
 						endif;
 						
 						// Proceed if tricky field validated ok.
 						
 						if($tricky_field_proceed):
+						
 																					
 							// If the user is using the wp_nonce field it must also validate through it.
 							
@@ -467,12 +512,10 @@ if(!function_exists('xtrcon_shortcode')):
 									
 								endif;
 							
-							endif;
-								
+							endif;								
 								
 							if($wp_nonce_proceed):
-														
-															
+																						
 								// IF the user has set anti script to yes and set question / answer
 								
 								$xtrcon_anti_proceed = true;
@@ -502,6 +545,8 @@ if(!function_exists('xtrcon_shortcode')):
 											
 											if(!xtrcon_check_email($v))
 												unset($cc_list[$k]);
+											else
+												trim($cc_list[$k]);
 																					
 										endforeach;
 										
@@ -540,18 +585,20 @@ if(!function_exists('xtrcon_shortcode')):
 									endif;
 									
 									// Use the stored success text
-									    
-									$message = '<div class="xtrcon_message xtrcon_success">'.$xtrcon_successful_submission_text.'</div>';
+									   
+									echo 'I suceeded';  
+									 
+									$message = '<div class="alert-message block-message success">'.$xtrcon_successful_submission_text.'</div>';
 									
 									$success = true;
 									
 								else:									
-									$message = __('<div class="xtrcon_message xtrcon_fail">You failed to answer the anti script correctly please try again.</div>');	
+									$message = __('<div class="alert-message block-message error">You failed to answer the anti script correctly please try again.</div>');	
 									$errors++;	
 								endif;
 								
 							else:
-								$message = __('<div class="xtrcon_message xtrcon_fail">You failed to validate it.</div>');	
+								$message = __('<div class="alert-message block-message error">You failed to validate it.</div>');	
 												
 								$errors++;							
 							endif;																									
@@ -559,24 +606,24 @@ if(!function_exists('xtrcon_shortcode')):
 							$errors++;
 						endif; // Tricky field is so tricky, it outputs no error message ;-)																								
 					else:
-						$message = __('<div class="xtrcon_message xtrcon_fail">You must include a message to send to us.</div>');
+						$message = __('<div class="alert-message block-message errorl">You must include a message to send to us.</div>');
 						$errors++;
 					endif;
 					
 					else:
 					
-						$message = __('<div class="xtrcon_message xtrcon_fail">You must enter a valid telephone number.</div>');
+						$message = __('<div class="alert-message block-message error">You must enter a valid telephone number.</div>');
 						$errors++;
 					
 					endif;
 					
 				else:
-					$message = __('<div class="xtrcon_message xtrcon_fail">You must include a valid email address.</div>');
+					$message = __('<div class="alert-message block-message error">You must include a valid email address.</div>');
 					$errors++;
 				endif;
 				
 			else:
-				$message = __('<div class="xtrcon_message xtrcon_fail">You must enter your name.</div>');
+				$message = __('<div class="alert-message block-message error">You must enter your name.</div>');
 				$errors++;
 			endif;
 			
@@ -629,6 +676,9 @@ if(!function_exists('xtrcon_shortcode')):
 		
 		$output .= '<p class="content_message">';
 		$output .= '<textarea tabindex="4" rows="10" cols="95%" id="contact_message" name="xtrcon_message_body">'.stripslashes($_POST['xtrcon_message_body']).'</textarea>';
+		$output .= '<label for="xtrcon_phone">';
+		$output .= '<small>Message (required)</small>';
+		$output .= '</label>';
 		$output .= '</p>';		
 		
 		// Only output the anti checker if the user wants one
@@ -665,7 +715,22 @@ if(!function_exists('xtrcon_shortcode')):
 		endif;
 		
 		$output .= '<p class="content_submit">';
-		$output .= '<input type="submit" value="Send Message" tabindex="5" id="submit" name="xtrcon_submit">';
+		$output .= '<button type="submit"'; 
+		
+		if($xtrcon_button_classes):
+			$classes = explode(",",$xtrcon_button_classes);
+			if(count($classes)==1):
+				$output .= ' class="'.$xtrcon_button_classes.'" ';
+			else:		
+				$output .= ' class="';	
+				$output .= implode(" ",$classes);
+				$output .= '" ';
+			endif;
+		endif;
+		
+		$output .= 'tabindex="5" id="submit" name="xtrcon_submit">';
+		$output .= __("Submit");
+		$putput .= '</button>';
 		$output .= '</p>';		
 
 		
