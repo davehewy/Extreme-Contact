@@ -440,6 +440,8 @@ endif;
 if(!function_exists('xtrcon_shortcode')):
 	function xtrcon_shortcode($args){
 	
+		$supporting_text = $args['supporting_text'];
+	
 		$xtrcon_sent_from = get_option('xtrcon_sent_from');
 		$xtrcon_subject = get_option('xtrcon_subject');
 		$xtrcon_to_address = get_option('xtrcon_to_address');
@@ -465,6 +467,8 @@ if(!function_exists('xtrcon_shortcode')):
 		$xtrcon_button_classes = get_option('xtrcon_button_classes');
 		
 		$success = false;
+		
+		$supporting_message = '<p>'.$supporting_text.'</p>';
 						
 		if(isset($_POST['xtrcon_submit'])):
 					
@@ -591,12 +595,12 @@ if(!function_exists('xtrcon_shortcode')):
 									$success = true;
 									
 								else:									
-									$message = __('<div class="alert-message block-message error">You failed to answer the anti script correctly please try again.</div>');	
+									$message.= __('<div class="alert-message block-message error">You failed to answer the anti script correctly please try again.</div>');	
 									$errors++;	
 								endif;
 								
 							else:
-								$message = __('<div class="alert-message block-message error">You failed to validate it.</div>');	
+								$message.= __('<div class="alert-message block-message error">You failed to validate it.</div>');	
 												
 								$errors++;							
 							endif;																									
@@ -604,24 +608,24 @@ if(!function_exists('xtrcon_shortcode')):
 							$errors++;
 						endif; // Tricky field is so tricky, it outputs no error message ;-)																								
 					else:
-						$message = __('<div class="alert-message block-message errorl">You must include a message to send to us.</div>');
+						$message.= __('<div class="alert-message block-message errorl">You must include a message to send to us.</div>');
 						$errors++;
 					endif;
 					
 					else:
 					
-						$message = __('<div class="alert-message block-message error">You must enter a valid telephone number.</div>');
+						$message.= __('<div class="alert-message block-message error">You must enter a valid telephone number.</div>');
 						$errors++;
 					
 					endif;
 					
 				else:
-					$message = __('<div class="alert-message block-message error">You must include a valid email address.</div>');
+					$message.= __('<div class="alert-message block-message error">You must include a valid email address.</div>');
 					$errors++;
 				endif;
 				
 			else:
-				$message = __('<div class="alert-message block-message error">You must enter your name.</div>');
+				$message.= __('<div class="alert-message block-message error">You must enter your name.</div>');
 				$errors++;
 			endif;
 			
@@ -630,8 +634,11 @@ if(!function_exists('xtrcon_shortcode')):
 		// Prepend the error or success message to the output
 		
 		if($message && $errors>0):
-		
-			$retmessage = '<div id="contact_response">';
+			
+			if(!$success):
+				$retmessage = $supporting_message;
+			endif;
+			$retmessage .= '<div id="contact_response">';
 			$retmessage .= $message;
 			$retmessage .= '</div>';
 		
