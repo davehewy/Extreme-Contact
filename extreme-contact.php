@@ -585,9 +585,7 @@ if(!function_exists('xtrcon_shortcode')):
 									endif;
 									
 									// Use the stored success text
-									   
-									echo 'I suceeded';  
-									 
+									   									 
 									$message = '<div class="alert-message block-message success">'.$xtrcon_successful_submission_text.'</div>';
 									
 									$success = true;
