@@ -439,7 +439,7 @@ endif;
 
 if(!function_exists('xtrcon_shortcode')):
 	function xtrcon_shortcode($args){
-	
+		
 		$supporting_text = $args['supporting_text'];
 	
 		$xtrcon_sent_from = get_option('xtrcon_sent_from');
@@ -469,7 +469,7 @@ if(!function_exists('xtrcon_shortcode')):
 		$success = false;
 		
 		$supporting_message = '<p>'.$supporting_text.'</p>';
-						
+								
 		if(isset($_POST['xtrcon_submit'])):
 					
 			$xtrcon_sub_name = xtrcon_checkdata($_POST['xtrcon_name'],4);
@@ -643,11 +643,14 @@ if(!function_exists('xtrcon_shortcode')):
 			$retmessage .= '</div>';
 		
 		elseif($message && $errors<=0):
-		
+
 			$retmessage = $message;
 		
 		else:
-			$retmessage = '';
+			if($supporting_message)
+				$retmessage = $supporting_message;
+			else
+				$retmessage = '';
 		endif;
 
 		$output = $retmessage;
