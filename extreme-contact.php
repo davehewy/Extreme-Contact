@@ -218,9 +218,7 @@ if(!function_exists('xtrcon_save_settings')):
 		if(isset($_POST['xtrcon_save_settings'])):	
 		
 			add_action('admin_notices','xtrcon_save_settings_message');
-			
-			print_r($_POST);
-			
+						
 			$xtrcon_sent_from = $_POST['xtrcon_sent_from'];
 			$xtrcon_subject = $_POST['xtrcon_subject'];
 			$xtrcon_to_sub = $_POST['xtrcon_to_address'];
@@ -482,9 +480,7 @@ if(!function_exists('xtrcon_shortcode')):
 			if($xtrcon_sub_name):
 				
 				if(xtrcon_check_email($xtrcon_sub_email)):
-								
-					if($xtrcon_phone):
-									
+																	
 					if($xtrcon_sub_body):
 					
 					
@@ -612,12 +608,6 @@ if(!function_exists('xtrcon_shortcode')):
 						$errors++;
 					endif;
 					
-					else:
-					
-						$message.= __('<div class="alert-message block-message error">You must enter a valid telephone number.</div>');
-						$errors++;
-					
-					endif;
 					
 				else:
 					$message.= __('<div class="alert-message block-message error">You must include a valid email address.</div>');
